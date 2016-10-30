@@ -1,0 +1,104 @@
+from bs4 import BeautifulSoup
+import requests
+
+monkeypath = "http://www.insidermonkey.com"
+homepage = requests.get(monkeypath).text
+insider = BeautifulSoup(homepage)
+
+x = [   tag.get_text() for tag in insider.find_all("h1")]
+y = [   tag.get_text() for tag in insider.find_all("h2")]
+
+headlines = x+y
+
+### Retrieving Insider buy side transactions and storing it in a list of lists 
+### Retrieving Insider buy side transactions and storing it in a list of lists 
+
+
+import pandas as pd 
+
+buying_url = "http://insidertrading.org/large-stock-buying.php?sort_by=acceptance_datetime&asc=&symbol=&date_from=2015-08-01&date_to=2016-08-07&submit=+GO+&page="
+data = []
+url_pages = []
+
+def extract_table(url):    
+    buying_text = requests.get(url).text
+    buying_parsed = BeautifulSoup(buying_text)
+
+    buying_table = buying_parsed.find("table", {"id": "tracker"})
+    buying = buying_table.find("tbody")
+    rows = buying.find_all("tr")
+
+    for row in rows:
+        cols = row.find_all('td')
+        cols = [item.text.strip() for item in cols]
+        data.append([item for item in cols])
+
+url_pages = [buying_url+str(i+1) for i in range(0,64)]    
+map(extract_table, url_pages)
+    
+## Checking I have the expected data set
+print len(data)
+df = pd.DataFrame(data)
+print df.tail()
+
+
+### Adding Insider selling side transactions to the data
+### Adding Insider selling side transactions to the data
+
+selling_url = "http://insidertrading.org/large-stock-selling.php?sort_by=acceptance_datetime&asc=&symbol=&date_from=2015-08-01&date_to=2016-08-07&submit=+GO+&page="
+url_pages = [selling_url+str(i+1) for i in range(0,71)]    
+     
+map(extract_table, url_pages)
+    
+print len(data)
+df = pd.DataFrame(data)
+
+print df.tail()
+
+#Renaming Columns
+df.columns= ["Side", "Date", "AcceptanceDate", "Company", "Symbol", "Owner", "OwnerRel", "Shares", "SharePrice", "Value", "Remaining", "Form"]
+df.head()
+
+df.to_csv("/Users/sharanduggal/Documents/Datascience/Projects/WebScrapingProjects/Insider/Past_Year_Transactions", sep = "\t")
+
+###Getting ticker's sector and industry details from Finviz 
+symbol_pages = "http://finviz.com/quote.ashx?t=bac&ty=c&ta=1&p=d"
+print symbol_pages
+sector = []
+
+def get_industry(symbol_pages):
+    count = 0
+    stock_url = requests.get(symbol_pages)
+    stock_text = stock_url.text
+    stock_soup = BeautifulSoup(stock_text)
+    stock_table = stock_soup.find("table", attrs={"class": "fullview-title"}) 
+    ###Creating a list of sector & industry
+    ###Inserting a blank record in the event a ticker symbol is wrong or if a ticker page is not found on Finviz
+    if stock_url.ok: 
+        sector.append([i.text for i in stock_table.find_all("a")[0:4]]) 
+        count = count+1
+        if count%2 == 0:
+            print count
+    else:
+        sector.append(["", "", "", ""])
+        
+##Creating Finviz URLs for each symbol in the data set
+Urls = "http://finviz.com/quote.ashx?t="+df.Symbol+"&ty=c&ta=1&p=d"
+print "End"
+
+###Applying function to all Urls
+map(get_industry, Urls) 
+print "End"
+
+###Concat the new Finviz Info with the Original data frame
+ind_df = pd.DataFrame(sector)
+ind_df.columns = ["Symbol", "Company", "Sector", "Industry"]
+del ind_df["Company"]
+
+newdf = pd.concat([df,ind_df], axis = 1)
+
+df.to_csv("/Users/sharanduggal/Documents/Datascience/Projects/WebScrapingProjects/Insider/Insiders_Aug8", sep = "\t")
+
+
+
+
