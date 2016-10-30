@@ -1,0 +1,478 @@
+df = read.table("/Users/sharanduggal/Documents/Datascience/Projects/WebScrapingProjects/Insider/Insider_Text.txt", sep = "\t", header = TRUE)
+# colnames(df) = df[1 ,]
+# df = df [-1,]
+names(df)
+str(df)
+
+View(df)
+head(df)
+
+############### Insider Analaysis ###############
+
+library(RColorBrewer)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(reshape2)
+library(data.table)
+str(dfi)
+summary(dfi)
+View(dfi)
+ncol(dfi)
+nrow(dfi)
+
+dfi = df
+dfi = dfi %>% mutate(Day0 = Close1 - Price)
+dfi = dfi %>% mutate(Day1 = Close2 - Close1)
+dfi = dfi %>% mutate(Day2 = Close3 - Close1)
+dfi = dfi %>% mutate(Day3 = Close4 - Close1)
+dfi = dfi %>% mutate(Day4 = Close5 - Close1)
+dfi = dfi %>% mutate(Day5 = Close6 - Close1)
+
+dfi = dfi %>% mutate(Day0.P = ((Close1 - Price)/Price)*100)
+dfi = dfi %>% mutate(Day1.P = ((Close2 - Close1)/Close1)*100)
+dfi = dfi %>% mutate(Day2.P = ((Close3 - Close1)/Close1)*100)
+dfi = dfi %>% mutate(Day3.P = ((Close4 - Close1)/Close1)*100)
+dfi = dfi %>% mutate(Day4.P = ((Close5 - Close1)/Close1)*100)
+dfi = dfi %>% mutate(Day5.P = ((Close6 - Close1)/Close1)*100)
+dfi[ , 41:52] = round(dfi[ , 41:52],2)
+
+
+dfi = dfi %>% mutate(Day1.V = ((Volume2 - Volume1)/Volume1)*100)
+dfi = dfi %>% mutate(Day2.V = ((Volume3 - Volume1)/Volume1)*100)
+dfi = dfi %>% mutate(Day3.V = ((Volume4 - Volume1)/Volume1)*100)
+dfi = dfi %>% mutate(Day4.V = ((Volume5 - Volume1)/Volume1)*100)
+dfi = dfi %>% mutate(Day5.V = ((Volume6 - Volume1)/Volume1)*100)
+dfi[ , 53:57] = round(dfi[ , 53:57], 2)
+
+summary(dfi$Day5.P)
+
+dfi[ , 53][is.infinite(dfi [ , 53])]  = NA
+dfi[ , 54][is.infinite(dfi [ , 54])]  = NA
+dfi[ , 55][is.infinite(dfi [ , 55])]  = NA
+dfi[ , 56][is.infinite(dfi [ , 56])]  = NA
+dfi[ , 57][is.infinite(dfi [ , 57])]  = NA
+
+dfi$month = substr(dfi$Date,6,7)
+
+remove.cols = c("Symbol", "Date", "LastSale", "Parts", "Groups", "Shares", "SharePrice", "Value", "Remaining")
+dfi = dfi[ , !names(dfi) %in% remove.cols]
+
+str(dfi)
+ncol(dfi)
+
+
+####################################################################################################################################################################################
+############################################################  END OF VARIABLE CREATION AND DATA CLEANING ################################ 
+####################################################################################################################################################################################
+str(dfi)
+#OVERALL DENSITY CURVES
+
+par(mfrow = c(2,2))
+
+a = ggplot(dfi, aes(Day1.P, color=Side)) + geom_density() + xlab("Percentage Change Vs. Day 1") + 
+  scale_color_brewer(palette = "Set3", direction = 1) + theme_dark() + ggtitle("Price change one day after transaction")
+
+b = ggplot(dfi, aes(Day2.P, color=Side)) + geom_density() + xlab("Percentage Change Vs. Day 1") + 
+  scale_color_brewer(palette = "Set3", direction = 1) + theme_dark() + ggtitle("Price change two days after transaction")
+
+c = ggplot(dfi, aes(Day3.P, color=Side)) + geom_density() + xlab("Percentage Change Vs. Day 1") + 
+  scale_color_brewer(palette = "Set3", direction = 1) + theme_dark() + ggtitle("Price change three days after transaction")
+
+d = ggplot(dfi, aes(Day4.P, color=Side)) + geom_density() + xlab("Percentage Change Vs. Day 1") + 
+  scale_color_brewer(palette = "Set3", direction = 1) + theme_dark() + ggtitle("Price change four days after transaction")
+
+e = ggplot(dfi, aes(Day5.P, color=Side)) + geom_density() + xlab("Percentage Change Vs. Day 1") + 
+  scale_color_brewer(palette = "Set3", direction = 1) + theme_dark() + ggtitle("Price change five days after transaction")
+
+grid.arrange(a,b,c,d,e)
+
+par(mfrow = c(1,1))
+
+#ON AVERAGE, WHAT PERCENTAGE WOULD YOU EARN ON DAY1,2,3,4,5. ON BUY SIDE. ON SELL SIDE.
+#ON AVERAGE, WHAT PERCENTAGE WOULD YOU EARN ON DAY1,2,3,4,5. ON BUY SIDE. ON SELL SIDE.
+#ON AVERAGE, WHAT PERCENTAGE WOULD YOU EARN ON DAY1,2,3,4,5. ON BUY SIDE. ON SELL SIDE.
+#ON AVERAGE, WHAT PERCENTAGE WOULD YOU EARN ON DAY1,2,3,4,5. ON BUY SIDE. ON SELL SIDE.
+#### All stocks
+overall.percent.data = dfi %>% group_by(Side) %>% summarise(Day1.Avg= mean(Day1.P, na.rm = TRUE), Day2.Avg= mean(Day2.P, na.rm = TRUE), 
+                                     Day3.Avg= mean(Day3.P, na.rm = TRUE), Day4.Avg= mean(Day4.P, na.rm = TRUE), 
+                                     Day5.Avg= mean(Day5.P, na.rm = TRUE))
+  
+price.change = melt(overall.percent.data, id.vars = "Side") %>% ggplot(aes(x = variable, y = value, fill = Side)) + 
+  geom_bar(stat = "identity", position = "identity") + coord_flip() + ggtitle("% Price Change Post Trans. -- All Stocks") + 
+  scale_fill_brewer(palette = "Set3") + theme_dark() + scale_x_discrete(labels = c("Day 1", "Day 2", "Day 3", "Day 4", "Day5")) +
+  xlab("") + ylab("Percentage Change") + geom_text(data = subset(melt(overall.percent.data, id.vars = "Side"), (value>0 | value < 0.06)), aes(x = variable, y = value-0.1, label = paste0(round(value,2),"%")))  + 
+  theme(plot.title = element_text(size = 24, face="bold"))  + ylim(-1.15, 3.5)
+
+price.change
+
+#### Stocks under 5
+overall.percent.data = dfi %>% group_by(Side) %>% filter(Close1 < 5) %>%   
+  summarise(Day1.Avg= mean(Day1.P, na.rm = TRUE), Day2.Avg= mean(Day2.P, na.rm = TRUE), 
+                                                            Day3.Avg= mean(Day3.P, na.rm = TRUE), Day4.Avg= mean(Day4.P, na.rm = TRUE), 
+                                                            Day5.Avg= mean(Day5.P, na.rm = TRUE))
+
+price.less.5 = melt(overall.percent.data, id.vars = "Side") %>% ggplot(aes(x = variable, y = value, fill = Side)) + 
+  geom_bar(stat = "identity", position = "identity") + coord_flip() + ggtitle("% Price Change Post Trans. -- Stocks < $5") + 
+  scale_fill_brewer(palette = "Set3") + theme_dark() + scale_x_discrete(labels = c("Day 1", "Day 2", "Day 3", "Day 4", "Day5")) +
+  xlab("") + ylab("Percentage Change") + geom_text(aes(x = variable, y = value+0.2, label = paste0(round(value,2),"%"))) + 
+  theme(plot.title = element_text(size = 24, face="bold")) + ylim(-1.15, 3.5)
+
+price.less.5
+
+#### Stocks over 5
+overall.percent.data = dfi %>% group_by(Side) %>% filter(Close1 > 5) %>%   
+  summarise(Day1.Avg= mean(Day1.P, na.rm = TRUE), Day2.Avg= mean(Day2.P, na.rm = TRUE), 
+            Day3.Avg= mean(Day3.P, na.rm = TRUE), Day4.Avg= mean(Day4.P, na.rm = TRUE), 
+            Day5.Avg= mean(Day5.P, na.rm = TRUE))
+
+price.more.5 = melt(overall.percent.data, id.vars = "Side") %>% ggplot(aes(x = variable, y = value, fill = Side)) + 
+  geom_bar(stat = "identity", position = "identity") + coord_flip() + ggtitle("% Price Change Post Trans. -- Stocks > $5") + 
+  scale_fill_brewer(palette = "Set3") + theme_dark() + scale_x_discrete(labels = c("Day 1", "Day 2", "Day 3", "Day 4", "Day5")) +
+  xlab("") + ylab("Percentage Change") + geom_text(data = subset(melt(overall.percent.data, id.vars = "Side"), value>0.02), aes(x = variable, y = value+0.2, label = paste0(round(value,2),"%"), check_overlap = TRUE)) + 
+  theme(plot.title = element_text(size = 24, face="bold")) + ylim(-1.15, 3.5)
+
+grid.arrange(price.change, price.less.5, price.more.5, ncol = 3)
+
+
+#ON AVERAGE, HOW DOES VOLUME CHANGE OVER THE 5 DAYS. 
+#ON AVERAGE, HOW DOES VOLUME CHANGE OVER THE 5 DAYS. 
+#ON AVERAGE, HOW DOES VOLUME CHANGE OVER THE 5 DAYS. 
+#ON AVERAGE, HOW DOES VOLUME CHANGE OVER THE 5 DAYS. 
+
+overall.volume = dfi %>% group_by(Side) %>% 
+  summarise(Day1.Avg= mean(Day1.V, na.rm = TRUE), Day2.Avg= mean(Day2.V, na.rm = TRUE), 
+            Day3.Avg= mean(Day3.V, na.rm = TRUE), Day4.Avg= mean(Day4.V, na.rm = TRUE), 
+            Day5.Avg= mean(Day5.V, na.rm = TRUE))
+
+volume.melted = melt(overall.volume, id.vars = "Side") %>% ggplot(aes(x = variable, y = value, fill = Side)) + 
+  geom_bar(stat = "identity", position = "dodge") + ggtitle("% Change in Volume Post Transaction -- All Stocks") + 
+  scale_fill_brewer(palette = "Set2") + theme_dark() + scale_x_discrete(labels = c("Day 1 Vs. Transaction Day", "Day 2 Vs. Transaction Day", "Day 3 Vs. Transaction Day", "Day 4 Vs. Transaction Day", "Day5 Vs. Transaction Day")) +
+  xlab("") + ylab("Percentage Change") +ylim (0,70) + theme(plot.title = element_text(size = 24, face="bold"))# + ylim(-1.15, 3.5)
+
+volume.melted
+
+
+overall.volume = dfi %>% group_by(Side) %>% filter(Close1 < 5) %>%  
+  summarise(Day1.Avg= mean(Day1.V, na.rm = TRUE), Day2.Avg= mean(Day2.V, na.rm = TRUE), 
+            Day3.Avg= mean(Day3.V, na.rm = TRUE), Day4.Avg= mean(Day4.V, na.rm = TRUE), 
+            Day5.Avg= mean(Day5.V, na.rm = TRUE))
+
+volume.under.5 = melt(overall.volume, id.vars = "Side") %>% ggplot(aes(x = variable, y = value, fill = Side)) + 
+  geom_bar(stat = "identity", position = "dodge") + ggtitle("% Change in Volume Post Transaction -- Stocks < $5") +
+  scale_fill_brewer(palette = "Set2") + theme_dark() + scale_x_discrete(labels = c("Day 1 Vs. Transaction Day", "Day 2 Vs. Transaction Day", "Day 3 Vs. Transaction Day", "Day 4 Vs. Transaction Day", "Day5 Vs. Transaction Day")) +
+  xlab("") + ylab("Percentage Change") + theme(plot.title = element_text(size = 24, face="bold"))
+
+volume.under.5
+
+overall.volume = dfi %>% group_by(Side) %>% filter(Close1 > 5) %>%  
+  summarise(Day1.Avg= mean(Day1.V, na.rm = TRUE), Day2.Avg= mean(Day2.V, na.rm = TRUE), 
+            Day3.Avg= mean(Day3.V, na.rm = TRUE), Day4.Avg= mean(Day4.V, na.rm = TRUE), 
+            Day5.Avg= mean(Day5.V, na.rm = TRUE))
+
+volume.over.5 = melt(overall.volume, id.vars = "Side") %>% ggplot(aes(x = variable, y = value, fill = Side)) + 
+  geom_bar(stat = "identity", position = "dodge") + ggtitle("% Change in Volume Post Transaction -- Stocks > $5") +
+  scale_fill_brewer(palette = "Set2") + theme_dark() + scale_x_discrete(labels = c("Day 1 Vs. Transaction Day", "Day 2 Vs. Transaction Day", "Day 3 Vs. Transaction Day", "Day 4 Vs. Transaction Day", "Day5 Vs. Transaction Day")) +
+  xlab("") + ylab("Percentage Change") +ylim (0,70) + theme(plot.title = element_text(size = 24, face="bold"))# + ylim(-1.15, 3.5)
+
+volume.over.5
+
+grid.arrange(volume.melted, volume.under.5, volume.over.5, nrow = 3)
+
+
+#### OVERALL RELATONSHIP BETWEEN VALUE OF SHARES AND ABSOLUTE PRICE CHANGE.
+
+dfi %>% filter(Valu < 10000000) %>% ggplot(aes(x = Valu, y = Day5, color = Side)) + geom_point() + facet_grid(Side ~ .) + 
+  scale_color_brewer() + theme_dark() + ggtitle("Price Change 5 days after transaction Vs. Value of Transaction") +
+  xlab("Value of Transaction (# of Shares X Price Purchased/Sold)") + ylab("Absoltue Price Change: Day 5 Minus Transaction Day") +
+  theme(plot.title = element_text(size = 24, face="bold"))
+
+dfi %>% filter(Valu < 10000000) %>% ggplot(aes(x = Valu, y = Day5.P, color = Side)) + geom_point() + facet_grid(Side ~ .) +
+  scale_color_brewer() + theme_dark() + ggtitle("Percentage Price Change 5 days after transaction Vs. Value of Transaction") +
+  xlab("Value of Transaction (# of Shares X Price Purchased/Sold)") + ylab("Percentage Price Change: Day 5 Minus Transaction Day") +
+  theme(plot.title = element_text(size = 24, face="bold"))
+
+
+### Price VS. ABSOLUTE PRICE CHANGE
+dfi %>% filter(Price < 1000) %>% ggplot(aes(x = Price, y = Day5, color = Side)) + geom_point() + facet_grid(Side ~ .) + 
+  scale_color_brewer() + theme_dark() + ggtitle("Price Change 5 days after transaction Vs. Value of Transaction") +
+  xlab("Value of Transaction (# of Shares X Price Purchased/Sold)") + ylab("Absoltue Price Change: Day 5 Minus Transaction Day") +
+  theme(plot.title = element_text(size = 24, face="bold"))
+
+
+#########################################################################################################################################
+################################################SEASONALITY IN NUMBER OF INSIDER TRANSACTIONS###########################################
+#########################################################################################################################################
+names(dfi)
+dfi$Date2 = as.Date(dfi$Date1)
+str(dfi)
+time.transactions = dfi %>% group_by(Side, month) %>% filter(Date2 > "2015-07-31" & Date2 < "2016-08-01") %>% summarise(trans = n())
+View(time.transactions)
+
+ggplot(time.transactions, aes(x = month, y = trans)) + geom_line(aes(group = Side, color = Side)) + 
+  scale_x_discrete(limits = c("08", "09", "10", "11", "12", "01", "02", "03", "04", "05", "06", "07"), labels = 
+                     c("Aug", "Sept", "Oct", "Nov", "Dec", "Jan", "Feb", "March", "April", "May", "Jun", "Jul")) + theme_dark() +
+  scale_color_brewer() + ggtitle("Number of Transactions Per Month -- Past Year") + ylab("# of Transactions") + 
+  xlab("Month") + theme(plot.title = element_text(size = 24, face="bold"))
+
+###### Profit and Loss by month ######
+
+dfi.red = subset(dfi, select = c(Side, month, Day5.P))
+dfi.red = na.omit(dfi.red)
+summary(dfi.red)
+
+profit.by.month = dfi.red %>% group_by(Side, month) %>% summarise(Monthly.Performance = mean(Day5.P))
+
+profit.by.month %>% ggplot(aes(x = month, y = Monthly.Performance, fill = Side)) + 
+  geom_bar(stat = "identity", position= "dodge") + theme_dark() + ggtitle("Percentage Price Change 5 Days Post Transaction -- by Month") +
+  theme(plot.title = element_text(size = 24, face="bold")) + ylab("Monthly Performance -- Percentage") + xlab("Month") + 
+  scale_fill_brewer(palette = "Set3") + scale_x_discrete(limits = c("08", "09", "10", "11", "12", "01", "02", "03", "04", "05", "06", "07"), labels = 
+                     c("Aug", "Sept", "Oct", "Nov", "Dec", "Jan", "Feb", "March", "April", "May", "Jun", "Jul"))
+  
+### GETTING MARKET PERFORMANCE INFO FOR THE PAST YEAR TO COMPARE AGAINST MONTHLY PERFORMANCE SHORT TERM PRICE MOVEMENT POST INSIDER TRANS. 
+SPY = getSymbols("SPY",src="yahoo", from = "2015-08-01", auto.assign = FALSE)
+candleChart(SPY)
+
+
+#########################################################################################################################################
+################################################PEFROMANCE BY SECTOR ###########################################
+#########################################################################################################################################
+
+##BUY SIDE
+library(googleVis)
+Sector = dfi %>% group_by(Sector) %>% filter(Side == "Buy") %>% summarise(Sector.Performance = mean(Day5.P, na.rm = TRUE)) 
+View(Sector)
+
+Gauge =  gvisGauge(Sector, 
+                    options=list(min=-5, max=5, greenFrom=1,
+                                 greenTo=5, yellowFrom=0, yellowTo=1,
+                                 redFrom=-5, redTo=0, width=1000, height=800))
+
+plot(Gauge)
+
+##SELL SIDE
+Sector = dfi %>% group_by(Sector) %>% filter(Side == "Sell") %>% summarise(Sector.Performance = mean(Day5.P, na.rm = TRUE)) 
+
+Gauge =  gvisGauge(Sector, 
+                   options=list(min=-5, max=5, greenFrom=-5,
+                                greenTo=-1, yellowFrom=-1, yellowTo=0,
+                                redFrom=0, redTo=5, width=1000, height=800))
+
+plot(Gauge)
+
+
+##CREATING SUBSET OF DATA SET AND FINAL DATA CLEANING STEPS.
+str(regdata)
+summary(regdata$MarketCapNew)
+regdata = subset(dfi, select = c("Side", "OwnerRel", "Share", "Price", "Valu", "Left", "MarketCap", "IPOyear", "Sector", "Industry", "Exchange", "month", "Day1.V", "Close1", "Day5.P", "Day5"))
+regdata$MarketCap = as.character(regdata$MarketCap)
+regdata$MarketCapMult = substr(regdata$MarketCap, nchar(regdata$MarketCap), nchar(regdata$MarketCap))
+regdata$MarketCap = gsub("\\$|B|M", "", regdata$MarketCap)
+regdata$MarketCap = as.numeric(regdata$MarketCap)
+
+regdata$MarketCapNew = ifelse(regdata$MarketCapMult == "B", regdata$MarketCap*1000000000,
+                              ifelse(regdata$MarketCapMult == "M", regdata$MarketCap*1000000,regdata$MarketCap))
+
+regdata$MarketCapNew = round(regdata$MarketCapNew, 2)
+regdata = subset(regdata, select = -c(MarketCapMult))
+names(regdata)
+
+
+
+#####################   ADDING DATA  #####################  
+#####################   QUANTMOD DATA  -- SPY #####################  
+
+library(quantmod)
+spy = getSymbols("^GSPC", src='yahoo', from="2006-01-01", to = "2016-10-01",  auto.assign = FALSE)
+spy 
+# nmonths(SPY)
+# monthlyReturn(SPY)
+tail(spy, 60)
+spy = to.monthly(spy)
+spy$mon.perform = ((spy$spy.Adjusted - spy$spy.Open)/spy$spy.Open)*100
+summary(spy$mon.perform)
+spy = as.data.frame(spy)
+spy$date = rownames(spy)
+rownames(spy) = NULL
+spy$date = substr(spy$date, 1, 3)
+
+spy$month = ifelse(spy$date == "Jan", "01", 
+                   ifelse(spy$date == "Feb", "02",
+                          ifelse(spy$date == "Mar", "03",
+                                 ifelse(spy$date == "Apr", "04",
+                                        ifelse(spy$date == "May", "05",
+                                               ifelse(spy$date == "Jun", "06",
+                                                      ifelse(spy$date == "Jul", "07",
+                                                             ifelse(spy$date == "Aug", "08",
+                                                                    ifelse(spy$date == "Sep", "09",
+                                                                           ifelse(spy$date == "Oct", "10",
+                                                                                  ifelse(spy$date == "Nov", "11",
+                                                                                         ifelse(spy$date == "Dec", "12", NA))))))))))))
+
+
+spy.stats = spy %>% group_by(month) %>% summarise(mkt.performance = mean(mon.perform), mkt.volume = mean(spy.Volume), mkt.range = mean(spy.High - spy.Low))
+spy.stats
+
+final.data = left_join(regdata, spy.stats)
+
+View(final.data)
+str(final.data)
+str(spy.stats) 
+str(regdata)
+summary(spy$spy.Volume)
+
+
+
+############################################################################################################################################
+############################################################################################################################################
+#################################################### MACHINE LEARNING  ##############################################
+############################################################################################################################################
+############################################################################################################################################
+
+#### LINEAR REGRESSION BETWEEN STOCK PRICE ON DAY 5, 4, 3, 2, 1 (without volume) AND --- 
+#FOR EACH SIDE
+#MARKET CAP, INDUSTRY, SECTOR, EXCHANGE, MONTH, VOLUME CHANGE ON DAY1, VALUE OF TRADE
+
+###################################################################################################################
+###################################################################################################################
+#############################################  KNN #############################################
+###################################################################################################################
+###################################################################################################################
+
+knndata = final.data
+
+#Converting Side, Exchange, Sector and Month to 0 - 1 Vars
+for (level in levels(knndata$Exchange)) {
+  knndata[paste("Exchange", level, sep = ".")] = ifelse(knndata$Exchange == level, 1, 0)
+}
+
+for (level in levels(knndata$Side)) {
+  knndata[paste("Side", level, sep = ".")] = ifelse(knndata$Side == level, 1, 0)
+}
+
+for (level in levels(knndata$Sector)) {
+  knndata[paste("Sector", level, sep = ".")] = ifelse(knndata$Sector == level, 1, 0)
+}
+
+
+knndata = subset(knndata, select =  -c(Side, Exchange, IPOyear, Day5, OwnerRel, MarketCap, Close1, Industry, Sector))
+knndata$outcome = ifelse(knndata$Day5.P < 0, "Drop", 
+                         ifelse(knndata$Day5.P > 0, "Rise", NA))
+knndata$outcome = as.factor(knndata$outcome)
+summary(knndata)
+str(knndata)
+View(knndata)
+
+#Removing records with NA in variables.
+knndata = na.omit(knndata)
+
+#Standardizing Continuous variables
+normalize = function(x) {
+  y = (x - min(x))/(max(x) - min(x))
+  y
+}
+
+knndata$Share = normalize(knndata$Share)
+knndata$Valu =  normalize(knndata$Valu)
+knndata$Price =  normalize(knndata$Price)
+knndata$Left = normalize(knndata$Left)
+knndata$MarketCapNew = normalize(knndata$MarketCapNew)
+knndata$Day1.V = normalize(knndata$Day1.V)
+
+
+kd.complete = knndata
+knndata[ knndata$month == "08", "outcome"] = NA  #Introducing NAs for all August records
+summary(knndata)
+knndata = subset(knndata, select =  -c(month))
+
+####### KNN ANALYSIS -- K = 166 
+sqrt(nrow(knndata)) #comes out to 166
+library(VIM)
+library(kknn)
+kd.166NN = kNN(knndata, k = 166)
+kd.166.results = table(kd.complete[kd.complete$month == "08", "outcome"], kd.166NN[kd.166NN$outcome_imp == TRUE, "outcome"])
+kd.166.results
+
+#79% of sell signals correct when going by transaction side alone as opposed to 63% with knn model
+table(kd.complete[kd.complete$month == "08" & kd.complete$Side.Sell == 1, "outcome"], kd.complete[kd.complete$month == "08" & kd.complete$Side.Sell == 1, "Side.Sell"])
+
+#70% of Buy signals correct when going by transaction side alone as opposed to 49% with knn model
+table(kd.complete[kd.complete$month == "08" & kd.complete$Side.Buy == 1, "outcome"], kd.complete[kd.complete$month == "08" & kd.complete$Side.Buy == 1, "Side.Buy"])
+
+### TESTING OUT KNN RESULTS FOR STOCKS PRICED LESS THAN $5 WORKS OUT BETTER
+
+############################################################################################
+#######################  KNN FOR STOCKS UNDER 5 DOLLARS #######################
+############################################################################################
+
+knndata = final.data
+
+#Converting Side, Exchange, Sector and Month to 0 - 1 Vars
+for (level in levels(knndata$Exchange)) {
+  knndata[paste("Exchange", level, sep = ".")] = ifelse(knndata$Exchange == level, 1, 0)
+}
+
+for (level in levels(knndata$Side)) {
+  knndata[paste("Side", level, sep = ".")] = ifelse(knndata$Side == level, 1, 0)
+}
+
+for (level in levels(knndata$Sector)) {
+  knndata[paste("Sector", level, sep = ".")] = ifelse(knndata$Sector == level, 1, 0)
+}
+
+
+knndata = knndata[knndata$Close1 < 5, ]
+
+
+knndata = subset(knndata, select =  -c(Side, Exchange, IPOyear, Day5, OwnerRel, MarketCap, Close1, Industry, Sector))
+knndata$outcome = ifelse(knndata$Day5.P < 0, "Drop", 
+                         ifelse(knndata$Day5.P > 0, "Rise", NA))
+knndata$outcome = as.factor(knndata$outcome)
+str(knndata)
+
+#Removing records with NA in variables.
+knndata = na.omit(knndata)
+
+#Standardizing Continuous variables
+normalize = function(x) {
+  y = (x - min(x))/(max(x) - min(x))
+  y
+}
+
+knndata$Share = normalize(knndata$Share)
+knndata$Valu =  normalize(knndata$Valu)
+knndata$Price =  normalize(knndata$Price)
+knndata$Left = normalize(knndata$Left)
+knndata$MarketCapNew = normalize(knndata$MarketCapNew)
+knndata$Day1.V = normalize(knndata$Day1.V)
+
+
+kd.complete = knndata
+knndata[ knndata$month == "08", "outcome"] = NA  #Introducing NAs for all August records
+summary(knndata)
+knndata = subset(knndata, select =  -c(month))
+
+####### KNN ANALYSIS -- K = 53
+sqrt(nrow(knndata)) #comes out to 53
+kd.53NN = kNN(knndata, k = 53)
+kd.53.results = table(kd.complete[kd.complete$month == "08", "outcome"], kd.53NN[kd.53NN$outcome_imp == TRUE, "outcome"])
+kd.53.results
+
+
+#61% of sell signals correct when going by transaction side alone as opposed to 71% with knn model
+table(kd.complete[kd.complete$month == "08" & kd.complete$Side.Sell == 1, "outcome"], kd.complete[kd.complete$month == "08" & kd.complete$Side.Sell == 1, "Side.Sell"])
+
+#51% of Buy signals correct when going by transaction side alone as opposed to 65% with knn model
+table(kd.complete[kd.complete$month == "08" & kd.complete$Side.Buy == 1, "outcome"], kd.complete[kd.complete$month == "08" & kd.complete$Side.Buy == 1, "Side.Buy"])
+
+
+
+
+
+
+
+
+
+
+
+
